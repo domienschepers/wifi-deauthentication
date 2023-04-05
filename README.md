@@ -53,6 +53,8 @@ These proof-of-concepts are implemented using the [Wi-Fi Framework](https://gith
 
 ## Security Updates and Patches
 
+The [Pixel Update Bulletin](https://source.android.com/docs/security/bulletin/pixel/2023-03-01) of March 2023 addressed the IGTK vulnerability (CVE-2023-21061).
+
 Patches were applied to ensure EAPOL-Key frames containing invalid field values are silently discarded:
 
 | | Patch |
