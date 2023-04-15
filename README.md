@@ -1,14 +1,12 @@
 # Wi-Fi Deauthentication
 
-In this repository, we present deauthentication techniques bypassing Wi-Fi Management Frame Protection.
+In this repository, we present deauthentication techniques bypassing Wi-Fi Management Frame Protection ([pdf](https://papers.mathyvanhoef.com/wisec2022.pdf)).
 
-This leads to denial-of-service, and can help an adversary to execute other attacks (for example, when a new handshake is required).
-
-We share proof-of-concept code, and provide an overview of available security patches and updates.
+The identified vulnerabilities lead to denial-of-service and network disruptions, and can help an adversary to execute other attacks (for example, when the adversary requires the execution of a new handshake).
 
 #### Wi-Fi Management Frame Protection
 
-Wi-Fi Management Frame Protection (MFP) protects robust management frames by providing data confidentiality, integrity, origin authenticity, and replay protection.
+Wi-Fi Management Frame Protection (MFP), defined in IEEE 802.11w, protects robust management frames by providing data confidentiality, integrity, origin authenticity, and replay protection.
 One of its key goals is to prevent deauthentication attacks in which an adversary forcibly disconnects a client from the network.
 
 ## Vulnerabilities
@@ -43,13 +41,62 @@ We identified the following vulnerabilities, disconnecting the client and access
 | Invalid Channel Switch Announcement | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | Unsupported Bandwidth Change | :heavy_check_mark: | | |
 
-## Proof-of-Concept
+## Proof-of-Concepts
 
-Proof-of-concepts are available in [test-deauthentication.py](test-deauthentication.py).
-  
-Note that currently not all proof-of-concepts are available due to ongoing disclosures and security updates.
+As proof-of-concepts we provide [test cases](framework/test-deauthentication.py) for the [Wi-Fi Framework](https://github.com/domienschepers/wifi-framework) (see [usage instructions](https://github.com/domienschepers/wifi-framework/blob/master/docs/USAGE.md)).
 
-These proof-of-concepts are implemented using the [Wi-Fi Framework](https://github.com/domienschepers/wifi-framework).
+Note that not all proof-of-concepts are available due to ongoing disclosures and security updates.
+
+As an example, we provide instructions for the `pmf-deauth-pmkid-tag-length` [test case](framework/test-deauthentication.py).
+
+#### Configuration
+
+Using the Wi-Fi Framework, start two virtual radio interfaces:
+
+```
+./setup/setup-hwsim.sh
+```
+
+Then load the appropriate network configuration to use WPA3-Personal with Management Frame Protection (MFP):
+
+```
+cd setup; ./load-config.sh wpa3-personal-pmf
+```
+
+#### Run the Wi-Fi Framework Test Case
+
+Start the access point which will execute the `pmf-deauth-pmkid-tag-length` test case:
+
+```
+./run.py wlan0 pmf-deauth-pmkid-tag-length
+```
+
+Finally, we can connect a client with the access point, which will initiate the attack:
+
+```
+./hostap.py wlan1
+```
+
+After successful execution, the test case will detect the protected deauthentication frame from the client.
+
+<p align="center">
+	<img width="750" src="framework/example-pmf-deauth-pmkid-tag-length.jpg">
+	<br />
+	<em>Example output for the invalid PMKID Tag Length using Linux 5.15.0 and hostap 2.10.</em>
+</p>
+
+#### Patch
+
+The following commit in hostap discards corrupted messages:
+
+- [WPA: Discard EAPOL-Key msg 1/4 with corrupted information elements](https://w1.fi/cgit/hostap/commit/?id=b1172c19e1900d478f98437fdf8114a5d5a81b0c)
+
+#### Network Capture
+
+In [example-pmf-deauth-pmkid-tag-length.pcapng](framework/example-pmf-deauth-pmkid-tag-length.pcapng), we provide a network capture demonstrating the attack.
+
+- Frame 34: Spoofed handshake frame which contains the corrupted RSN PMKID tag length.
+- Frame 36: The victim client transmits a protected deauthentication frame.
 
 ## Security Updates and Patches
 
@@ -64,6 +111,34 @@ Patches were applied to ensure EAPOL-Key frames containing invalid field values 
 
 ## Publication
 
-ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec 2022):
+This work is published at the 2022 ACM Conference on Security and Privacy in Wireless and Mobile Networks ([WiSec 2022](https://wisec2022.cs.utsa.edu/accepted-papers/#On_the_Robustness_of_Wi_Fi_Deauthentication_Countermeasures)).
 
-- On the Robustness of Wi-Fi Deauthentication Countermeasures ([pdf](https://aanjhan.com/assets/schepers22wisec.pdf), [acm](https://dl.acm.org/doi/abs/10.1145/3507657.3528548))
+#### Title
+
+On the Robustness of Wi-Fi Deauthentication Countermeasures ([pdf](https://papers.mathyvanhoef.com/wisec2022.pdf), [acm](https://dl.acm.org/doi/abs/10.1145/3507657.3528548))
+
+#### Abstract
+
+With the introduction of WPA3 and Wi-Fi 6, an increased usage of Wi-Fi Management Frame Protection (MFP) is expected.
+Wi-Fi MFP, defined in IEEE 802.11w, protects robust management frames by providing data confidentiality, integrity, origin authenticity, and replay protection.
+One of its key goals is to prevent deauthentication attacks in which an adversary forcibly disconnects a client from the network.
+
+In this paper, we inspect the standard and its implementations for their robustness and protection against deauthentication attacks.
+In our standard analysis, we inspect the rules for processing robust management frames on their completeness, consistency, and security, leading to the discovery of unspecified cases, contradictory rules, and revealed insecure rules that lead to new denial-of-service vulnerabilities.
+We then inspect implementations and identify vulnerabilities in clients and access points running on the latest versions of the Linux kernel, hostap, IWD, Apple (i.e., macOS, iOS, iPadOS), Windows, and Android.
+Altogether, these vulnerabilities allow an adversary to disconnect any client from personal and enterprise networks despite the usage of MFP.
+
+Our work highlights that management frame protection is insufficient to prevent deauthentication attacks, and therefore more care is needed to mitigate attacks of this kind.
+In order to address the identified shortcomings, we worked with industry partners to propose updates to the IEEE 802.11 standard.
+
+#### BibTeX
+
+```bibtex
+@inproceedings{schepers2022robustness,
+  title={On the Robustness of {Wi-Fi} Deauthentication Countermeasures},
+  author={Schepers, Domien and Ranganathan, Aanjhan and Vanhoef, Mathy},
+  booktitle={Proceedings of the 15th ACM Conference on Security and Privacy in Wireless and Mobile Networks},
+  pages={245--256},
+  year={2022}
+}
+```
